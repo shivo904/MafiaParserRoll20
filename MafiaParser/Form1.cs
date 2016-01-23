@@ -71,6 +71,42 @@ namespace MafiaParser
         {
             try
             {
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://app.roll20.net/sessions/create");
+                request.CookieContainer = new CookieContainer();
+                String data = "email=michaelchurch90@gmail.com&password=NotMyActualPassword;
+                byte[] byteArray = Encoding.UTF8.GetBytes(data);
+                request.Method = "POST";
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.ContentLength = byteArray.Length;
+                Stream requestStream = request.GetRequestStream();
+                
+                
+        
+                Stream dataStream = request.GetRequestStream();
+                dataStream.Write(byteArray, 0, byteArray.Length);
+                dataStream.Close();
+
+                WebResponse response = request.GetResponse();
+
+                Console.WriteLine(((HttpWebResponse)response).StatusDescription);
+
+                dataStream = response.GetResponseStream();
+                StreamReader reader = new StreamReader(dataStream);
+
+                //string responseFromServer = reader.ReadToEnd();
+               // Console.WriteLine(responseFromServer);
+                CookieCollection cookieJar = ((HttpWebResponse)response).Cookies;
+                foreach (Cookie cookie in cookieJar)
+                {
+                    Console.WriteLine(cookie.ToString());
+                    Console.WriteLine(cookie.Value);
+                }
+
+
+                reader.Close();
+                dataStream.Close();
+                response.Close();
+                
                 error = false;
                 posts.Clear();
                 int count = 0;
@@ -125,10 +161,7 @@ namespace MafiaParser
             {
                 MessageBox.Show("Please click on the New Game button in the bottom left of the page to add your game");
             }
-            catch (Exception e)
-            {
-                MessageBox.Show(e.Message);
-            }
+  
             try
             {
                 using (StreamWriter sw = File.CreateText("All.html"))
