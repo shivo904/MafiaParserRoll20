@@ -73,7 +73,7 @@ namespace MafiaParser
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://app.roll20.net/sessions/create");
                 request.CookieContainer = new CookieContainer();
-                String data = "email=michaelchurch90@gmail.com&password=NotMyActualPassword;
+                String data = "email=michaelchurch90@gmail.com&password=NotMyActualPassword";
                 byte[] byteArray = Encoding.UTF8.GetBytes(data);
                 request.Method = "POST";
                 request.ContentType = "application/x-www-form-urlencoded";
