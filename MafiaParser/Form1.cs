@@ -18,7 +18,7 @@ namespace MafiaParser
 {
     public partial class Form1 : Form
     {
-        Dictionary<int, string> dictionary = new Dictionary<int, string>() 
+        Dictionary<int, string> dictionary = new Dictionary<int, string>()
         {
             {1,"orange"},
             {2,"green"},
@@ -39,6 +39,7 @@ namespace MafiaParser
         };
         List<ForumPost> posts = new List<ForumPost>();
         DirectoryInfo di = new DirectoryInfo(Directory.GetCurrentDirectory());
+        string cookie = "";
         bool error = false;
 
         public Form1()
@@ -48,7 +49,7 @@ namespace MafiaParser
 
         private void button1_Click(object sender, EventArgs e)
         {
-            
+
             panel1.Visible = true;
             label5.Visible = true;
             pictureBox1.Visible = true;
@@ -73,15 +74,13 @@ namespace MafiaParser
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://app.roll20.net/sessions/create");
                 request.CookieContainer = new CookieContainer();
-                String data = "email=michaelchurch90@gmail.com&password=NotMyActualPassword";
+                String data = "email=flame9040@gmail.com&password=NOTMYPASSWORD";
                 byte[] byteArray = Encoding.UTF8.GetBytes(data);
                 request.Method = "POST";
                 request.ContentType = "application/x-www-form-urlencoded";
                 request.ContentLength = byteArray.Length;
-                Stream requestStream = request.GetRequestStream();
-                
-                
-        
+
+
                 Stream dataStream = request.GetRequestStream();
                 dataStream.Write(byteArray, 0, byteArray.Length);
                 dataStream.Close();
@@ -94,74 +93,62 @@ namespace MafiaParser
                 StreamReader reader = new StreamReader(dataStream);
 
                 //string responseFromServer = reader.ReadToEnd();
-               // Console.WriteLine(responseFromServer);
+                // Console.WriteLine(responseFromServer);
                 CookieCollection cookieJar = ((HttpWebResponse)response).Cookies;
-                foreach (Cookie cookie in cookieJar)
+                foreach (Cookie c in cookieJar)
                 {
-                    Console.WriteLine(cookie.ToString());
-                    Console.WriteLine(cookie.Value);
+                    if (c.Name == "rack.session")
+                    {
+                        cookie = c.Value;
+                    }
                 }
 
 
                 reader.Close();
                 dataStream.Close();
                 response.Close();
-                
+
                 error = false;
                 posts.Clear();
                 int count = 0;
-                SHDocVw.InternetExplorer IE = new SHDocVw.InternetExplorer();
-                IE.Visible = false;
+                //SHDocVw.InternetExplorer IE = new SHDocVw.InternetExplorer();
+                //IE.Visible = false;
                 for (int i = (int)Math.Floor(minPage.Value); i <= (int)Math.Floor(maxPage.Value); i++)
                 {
-                    IE.Navigate(File.ReadAllText("MafiaUrlConfig") + "?pagenum=" + i);
-                    while (IE.ReadyState.ToString() != "READYSTATE_COMPLETE")
+                    HttpWebRequest forumPageRequest = (HttpWebRequest)WebRequest.Create(File.ReadAllText("MafiaUrlConfig") + "?pagenum=" + i);
+                    forumPageRequest.Method = "GET";
+                    forumPageRequest.Headers.Add("cookie", "rack.session="+cookie);
+                    WebResponse forumResponse = forumPageRequest.GetResponse();
+                    Stream forumStream = forumResponse.GetResponseStream();
+                    StreamReader forumReader = new StreamReader(forumStream);
+                    string content = forumReader.ReadToEnd();
+
+
+                    File.WriteAllText("temporaryHold.html", content);
+
+                    // load snippet
+                    HtmlAgilityPack.HtmlDocument htmlSnippet = new HtmlAgilityPack.HtmlDocument();
+                    htmlSnippet = LoadHtmlSnippetFromFile();
+
+                    // extract Posts
+                    if (ExtractAllPosts(htmlSnippet, i.ToString()) != null)
                     {
-                        System.Threading.Thread.Sleep(100);
-                    }
-                    if (!IE.LocationURL.ToString().Contains("pagenum") && count < 5)
-                    {
-                        count++;
-                        i--;
-                    }
-                    else if (count >= 5)
-                    {
-                        MessageBox.Show("Could not connect to forum post. Make sure that you are logged into roll20 on Internet Explorer, and that you have the correct url.");
-                        count = 0;
-                        posts.Clear();
-                        break;
+                        posts.AddRange(ExtractAllPosts(htmlSnippet, i.ToString()));
                     }
                     else
                     {
-                        var htmlDoc = IE.Document;
-
-                        string content = htmlDoc.body.outerHTML;
-                        File.WriteAllText("temporaryHold.html", content);
-
-                        // load snippet
-                        HtmlAgilityPack.HtmlDocument htmlSnippet = new HtmlAgilityPack.HtmlDocument();
-                        htmlSnippet = LoadHtmlSnippetFromFile();
-
-                        // extract Posts
-                        if (ExtractAllPosts(htmlSnippet, i.ToString()) != null)
-                        {
-                            posts.AddRange(ExtractAllPosts(htmlSnippet, i.ToString()));
-                        }
-                        else
-                        {
-                            error = true;
-                            posts.Clear();
-                            break;
-                        }
+                        error = true;
+                        posts.Clear();
+                        break;
                     }
+
                 }
-                IE.Quit();
             }
             catch (FileNotFoundException)
             {
                 MessageBox.Show("Please click on the New Game button in the bottom left of the page to add your game");
             }
-  
+
             try
             {
                 using (StreamWriter sw = File.CreateText("All.html"))
@@ -314,7 +301,7 @@ namespace MafiaParser
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateFilter();
-            if(webBrowser1.Document.Body != null)
+            if (webBrowser1.Document.Body != null)
                 webBrowser1.Document.Body.Focus();
         }
         private void textBox1_TextChanged(object sender, EventArgs e)
@@ -402,7 +389,7 @@ namespace MafiaParser
             panel1.Visible = false;
             label5.Visible = false;
             pictureBox1.Visible = false;
-            
+
             comboBox1.Enabled = true;
             textBox1.Enabled = true;
             checkBox1.Enabled = true;
